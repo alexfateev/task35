@@ -1,11 +1,11 @@
-import java.io.IOException;
-import java.io.ObjectOutputStream;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
 import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
 public class Main {
@@ -30,6 +30,41 @@ public class Main {
         saveGame("save02", game2);
         saveGame("save03", game3);
         zipFiles("zip.zip", Arrays.asList("save01", "save02", "save03"));
+        openZip("zip.zip", Paths.get(gameDirectory, "savegames").toString());
+        System.out.println(openProgress(
+                Paths.get(gameDirectory, "savegames", "save01").toString()));
+    }
+
+    private static GameProgress openProgress(String fileName) {
+        GameProgress gameProgress = null;
+        try (FileInputStream fis = new FileInputStream(fileName);
+             ObjectInputStream ois = new ObjectInputStream(fis)) {
+            gameProgress = (GameProgress) ois.readObject();
+        } catch (Exception ex) {
+            System.out.println(ex.getMessage());
+        }
+        return gameProgress;
+    }
+
+    private static void openZip(String zipFile, String dstDir) {
+        try (ZipInputStream zin = new ZipInputStream(
+                Files.newInputStream(Paths.get(gameDirectory, "savegames", zipFile)))) {
+            ZipEntry entry;
+            String name;
+            while ((entry = zin.getNextEntry()) != null) {
+                name = entry.getName();
+                FileOutputStream fout = new FileOutputStream(
+                        Paths.get(dstDir, name).toString());
+                for (int c = zin.read(); c != -1; c = zin.read()) {
+                    fout.write(c);
+                }
+                fout.flush();
+                zin.closeEntry();
+                fout.close();
+            }
+        } catch (Exception ex) {
+            System.out.println(ex.getMessage());
+        }
     }
 
     private static void zipFiles(String fileName, List<String> listFiles) {
@@ -108,4 +143,6 @@ public class Main {
             throw new RuntimeException(e);
         }
     }
+
+
 }
